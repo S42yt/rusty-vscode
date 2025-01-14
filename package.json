@@ -1,62 +1,73 @@
 {
-    "name": "rusty",
-    "displayName": "Rusty Code Formatter",
-    "description": "A Rust Code formatter to work together.",
-    "version": "0.0.1",
-    "publisher": "S42",
-    "engines": {
-        "vscode": "^1.50.0"
-    },
-    "categories": [
-        "Formatters"
+  "name": "rusty",
+  "displayName": "Rusty Code Formatter",
+  "description": "A Rust Code formatter to work together.",
+  "version": "0.0.1",
+  "publisher": "S42",
+  "engines": {
+    "vscode": "^1.50.0"
+  },
+  "categories": [
+    "Formatters"
+  ],
+  "activationEvents": [
+    "onLanguage:rust",
+    "onCommand:rusty.format"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "rust",
+        "extensions": [
+          ".rs"
+        ],
+        "configuration": "./language-configuration.json"
+      }
     ],
-    "activationEvents": [
-        "onLanguage:rust",
-        "onCommand:rusty.format"
+    "commands": [
+      {
+        "command": "rusty.format",
+        "title": "Rusty Format"
+      }
     ],
-    "main": "./out/extension.js",
-    "contributes": {
-        "languages": [
-            {
-                "id": "rust",
-                "extensions": [".rs"],
-                "configuration": "./language-configuration.json"
-            }
-        ],
-        "commands": [
-            {
-                "command": "rusty.format",
-                "title": "Rusty Format"
-            }
-        ],
-        "keybindings": [
-            {
-                "command": "rusty.format",
-                "key": "ctrl+shift+5",
-                "when": "editorTextFocus && editorLangId == 'rust'"
-            }
-        ],
-        "configuration": {
-            "type": "object",
-            "title": "Rusty Configuration",
-            "properties": {
-                "rusty.rustfmtPath": {
-                    "type": "string",
-                    "default": "rustfmt",
-                    "description": "Path to the rustfmt executable."
-                }
-            }
+    "keybindings": [
+      {
+        "command": "rusty.format",
+        "key": "ctrl+shift+5",
+        "when": "editorTextFocus && editorLangId == 'rust'"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Rusty Configuration",
+      "properties": {
+        "rusty.rustfmtPath": {
+          "type": "string",
+          "default": "rustfmt",
+          "description": "Path to the rustfmt executable."
+        },
+        "rusty.rustfmtArgs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Additional arguments for rustfmt."
         }
-    },
-    "scripts": {
-        "vscode:prepublish": "bun run compile",
-        "compile": "tsc -p ./",
-        "watch": "tsc -watch -p ./",
-        "postinstall": "node ./node_modules/vscode/bin/install"
-    },
-    "devDependencies": {
-        "typescript": "^4.0.3",
-        "vscode": "^1.1.37",
-        "@types/node": "^14.14.6"
+      }
     }
+  },
+  "scripts": {
+    "vscode:prepublish": "bun run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretty": "prettier --write .",
+    "pretty:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "typescript": "^4.0.3",
+    "vscode": "^1.1.37",
+    "@types/node": "^14.14.6"
+  }
 }

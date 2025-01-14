@@ -12,6 +12,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
 
       - name: Install Bun
         run: |
@@ -52,10 +59,17 @@ jobs:
           fi
           echo "NEW_TAG=$NEW_TAG" >> $GITHUB_ENV
 
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: Create Tag
         run: |
           git tag $NEW_TAG
           git push origin $NEW_TAG
+        env:
+          GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}
 
       - name: Create Release
         uses: actions/create-release@v1

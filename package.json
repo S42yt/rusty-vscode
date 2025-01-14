@@ -15,6 +15,7 @@
     "onCommand:rusty.format"
   ],
   "main": "./out/extension.js",
+  "icon": "assets/icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/s42yt/rusty-vscode.git"

@@ -3,12 +3,10 @@ name: Build and Release
 on:
   push:
     branches:
-      - main  
-    tags:
-      - 'v1.*.*' 
+      - main
 
 jobs:
-  build:
+  build_and_release:
     runs-on: ubuntu-latest
 
     steps:
@@ -17,7 +15,7 @@ jobs:
 
       - name: Install Bun
         run: |
-          curl https://bun.sh/install | bash
+          curl -fsSL https://bun.sh/install | bash
           echo "${HOME}/.bun/bin" >> $GITHUB_PATH
 
       - name: Install dependencies with Bun
@@ -41,12 +39,40 @@ jobs:
             exit 1
           fi
 
-      - name: Upload release files to GitHub
-        if: startsWith(github.ref, 'refs/tags/')  # Only run this step for tags
-        uses: softprops/action-gh-release@v1
+      - name: Get latest release tag
+        id: get_latest_release
+        run: |
+          git fetch --tags
+          TAG=$(git tag --list "v1.*.*" --sort=-v:refname | head -n 1)
+          echo "Latest tag: $TAG"
+          if [ -z "$TAG" ]; then
+            NEW_TAG="v1.0.0"
+          else
+            NEW_TAG=$(echo $TAG | awk -F. '{printf "v%d.%d.%d", $1, $2+1, 0}')
+          fi
+          echo "NEW_TAG=$NEW_TAG" >> $GITHUB_ENV
+
+      - name: Create Tag
+        run: |
+          git tag $NEW_TAG
+          git push origin $NEW_TAG
+
+      - name: Create Release
+        uses: actions/create-release@v1
         with:
-          files: |
-            rusty-extension.zip
-            *.vsix  # Ensure this matches your VSIX file pattern
+          tag_name: ${{ env.NEW_TAG }}
+          release_name: Release ${{ env.NEW_TAG }}
+          draft: false
+          prerelease: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
+          GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}
+
+      - name: Upload Release Assets
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./rusty-extension.zip
+          asset_name: rusty-extension.zip
+          asset_content_type: application/zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}

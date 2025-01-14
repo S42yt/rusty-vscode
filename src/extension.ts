@@ -11,9 +11,6 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(formatCommand);
 
-  const outputChannel = vscode.window.createOutputChannel("Rusty Formatter");
-  outputChannel.appendLine("Rusty extension activated.");
-  outputChannel.show(true);
 }
 
 export function deactivate(): void {}

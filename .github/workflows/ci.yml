@@ -1,92 +1,73 @@
-name: Build and Release
+name: CI
 
 on:
   push:
     branches:
       - main
+  release:
+    types: [created]
 
 jobs:
-  build_and_release:
+  build:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0 
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
 
       - name: Install Bun
         run: |
           curl -fsSL https://bun.sh/install | bash
-          echo "${HOME}/.bun/bin" >> $GITHUB_PATH
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
 
-      - name: Install dependencies with Bun
+      - name: Install dependencies
         run: bun install
 
-      - name: Compile the project
+      - name: Compile TypeScript
         run: bun run compile
 
-      - name: Install vsce (Visual Studio Code Extension CLI)
-        run: bun add -g vsce
-
       - name: Package VSIX
-        run: vsce package
+        run: bun run vsce package
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
 
-      - name: Create zip package
+      - name: Create ZIP package
         run: |
-          if [ -d "out" ]; then
-            zip -r rusty-extension.zip out/ extension.js package.json README.md LICENSE
-          else
-            echo "The 'out' directory does not exist."
-            exit 1
-          fi
+          zip -r rusty-extension.zip .
 
-      - name: Get latest release tag
-        id: get_latest_release
-        run: |
-          git fetch --tags
-          TAG=$(git tag --list "v1.*.*" --sort=-v:refname | head -n 1)
-          echo "Latest tag: $TAG"
-          if [ -z "$TAG" ]; then
-            NEW_TAG="v1.0.0"
-          else
-            NEW_TAG=$(echo $TAG | awk -F. '{printf "v%d.%d.%d", $1, $2+1, 0}')
-          fi
-          echo "NEW_TAG=$NEW_TAG" >> $GITHUB_ENV
-
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Create Tag
-        run: |
-          git tag $NEW_TAG
-          git push origin $NEW_TAG
+      - name: Create Git Tag
         env:
           GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}
+        run: |
+          git tag v1.0.0
+          git push origin v1.0.0
 
       - name: Create Release
         uses: actions/create-release@v1
-        with:
-          tag_name: ${{ env.NEW_TAG }}
-          release_name: Release ${{ env.NEW_TAG }}
-          draft: false
-          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}
+        with:
+          tag_name: v1.0.0
+          release_name: Release v1.0.0
+          draft: false
+          prerelease: false
 
-      - name: Upload Release Assets
+      - name: Upload VSIX
         uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./rusty-*.vsix
+          asset_name: rusty-extension.vsix
+          asset_content_type: application/octet-stream
+
+      - name: Upload ZIP
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./rusty-extension.zip
           asset_name: rusty-extension.zip
           asset_content_type: application/zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}

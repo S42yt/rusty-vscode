@@ -1,28 +1,97 @@
-export function formatRustCode(code: string): string {
-    const lines = code.split('\n');
-    let indentLevel = 0;
-    const formattedLines: string[] = [];
-    const indent = '    ';
+import * as vscode from 'vscode';
+import { spawn } from 'child_process';
+import * as path from 'path';
 
-    lines.forEach(line => {
-        const trimmedLine = line.trim();
+const outputChannel = vscode.window.createOutputChannel('Rusty Formatter');
 
-        if (trimmedLine.startsWith('}')) {
-            indentLevel = Math.max(indentLevel - 1, 0);
-        }
+function getRustfmtPath(): string {
+    const config = vscode.workspace.getConfiguration('rusty');
+    return config.get<string>('rustfmtPath', 'rustfmt');
+}
 
-        let formattedLine = indent.repeat(indentLevel) + trimmedLine;
+export async function formatWithRustfmt(filePath: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const rustfmtPath = getRustfmtPath();
 
-        if (trimmedLine.endsWith('{') || trimmedLine.endsWith('(')) {
-            indentLevel++;
-        }
+        const absolutePath = path.isAbsolute(filePath) ? filePath : path.join(vscode.workspace.rootPath || '', filePath);
 
-        if (trimmedLine.endsWith('}')) {
-            indentLevel = Math.max(indentLevel - 1, 0);
-        }
+        outputChannel.appendLine(`Executing command: ${rustfmtPath} ${absolutePath}`);
 
-        formattedLines.push(formattedLine);
+        const rustfmt = spawn(rustfmtPath, [absolutePath]);
+
+        let stderrData = '';
+        let stdoutData = '';
+
+        rustfmt.stdout.on('data', (data) => {
+            stdoutData += data.toString();
+        });
+
+        rustfmt.stderr.on('data', (data) => {
+            stderrData += data.toString();
+        });
+
+        rustfmt.on('close', (code) => {
+            if (code !== 0) {
+                outputChannel.appendLine(`rustfmt exited with code ${code}`);
+                outputChannel.appendLine(`Error executing rustfmt:\n${stderrData.trim()}`);
+                reject(new Error(stderrData.trim() || 'Unknown error'));
+            } else {
+                if (stderrData.trim()) {
+                    outputChannel.appendLine(`Rustfmt warnings/errors:\n${stderrData.trim()}`);
+                }
+                if (stdoutData.trim()) {
+                    outputChannel.appendLine(`Rustfmt output:\n${stdoutData.trim()}`);
+                }
+                resolve();
+            }
+        });
+
+        rustfmt.on('error', (err) => {
+            outputChannel.appendLine(`Failed to start rustfmt: ${err.message}`);
+            reject(new Error(`Failed to start rustfmt: ${err.message}`));
+        });
     });
+}
 
-    return formattedLines.join('\n');
+export async function formatActiveFile(): Promise<void> {
+    const editor = vscode.window.activeTextEditor;
+
+    if (!editor) {
+        vscode.window.showErrorMessage('No active editor found!');
+        outputChannel.appendLine('No active editor found.');
+        return;
+    }
+
+    const document = editor.document;
+
+    if (document.languageId !== 'rust') {
+        vscode.window.showErrorMessage('Rusty can only format Rust files.');
+        outputChannel.appendLine('Attempted to format a non-Rust file.');
+        return;
+    }
+
+    if (document.isDirty) {
+        outputChannel.appendLine('Document has unsaved changes. Saving now...');
+        await document.save();
+    } else {
+        outputChannel.appendLine('Document is already saved.');
+    }
+
+    if (document.isUntitled) {
+        vscode.window.showErrorMessage('Please save the document before formatting.');
+        outputChannel.appendLine('Attempted to format an unsaved (untitled) document.');
+        return;
+    }
+
+    try {
+        vscode.window.showInformationMessage('Formatting Rust code...');
+        outputChannel.appendLine(`Formatting started for file: ${document.fileName}`);
+        await formatWithRustfmt(document.fileName);
+        vscode.window.showInformationMessage('✅ Rust code formatted successfully!');
+        outputChannel.appendLine('Formatting completed successfully.');
+        await document.save();
+    } catch (error) {
+        vscode.window.showErrorMessage(`❌ Formatting failed: ${error}`);
+        outputChannel.appendLine(`Formatting failed: ${error}`);
+    }
 }

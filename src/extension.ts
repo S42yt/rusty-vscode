@@ -1,22 +1,29 @@
 import * as vscode from 'vscode';
-import { formatRustCode } from './formatter';
+import { formatActiveFile } from './formatter';
 
 export function activate(context: vscode.ExtensionContext) {
-  let disposable = vscode.commands.registerCommand('rusty.format', () => {
-    const editor = vscode.window.activeTextEditor;
-    if (editor && editor.document.languageId === 'rust') {
-      const formatted = formatRustCode(editor.document.getText());
-      editor.edit(editBuilder => {
-        const fullRange = new vscode.Range(
-          editor.document.positionAt(0),
-          editor.document.positionAt(editor.document.getText().length)
-        );
-        editBuilder.replace(fullRange, formatted);
-      });
-    }
-  });
+    const formatCommand = vscode.commands.registerCommand('rusty.format', async () => {
+        await formatActiveFile();
+    });
 
-  context.subscriptions.push(disposable);
+    context.subscriptions.push(formatCommand);
+
+    const saveListener = vscode.workspace.onWillSaveTextDocument(async (event) => {
+        const document = event.document;
+
+        if (document.languageId === 'rust') {
+            try {
+                await formatActiveFile();
+            } catch (error) {
+                vscode.window.showErrorMessage(`❌ Formatting on save failed: ${error}`);
+            }
+        }
+    });
+
+    context.subscriptions.push(saveListener);
+
+    // Initial log to indicate activation
+    const outputChannel = vscode.window.createOutputChannel('Rusty Formatter');
+    outputChannel.appendLine('Rusty extension activated.');
+    outputChannel.show(true); // Show the Output Channel on activation
 }
-
-export function deactivate() {}

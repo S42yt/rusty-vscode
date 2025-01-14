@@ -49,4 +49,4 @@ jobs:
             rusty-extension.zip
             *.vsix  # Ensure this matches your VSIX file pattern
         env:
-          GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}  
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  

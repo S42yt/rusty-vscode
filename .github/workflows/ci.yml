@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          persist-credentials: true  
 
       - name: Install Bun
         run: |
@@ -44,7 +46,7 @@ jobs:
       - name: Create Git Tag
         if: startsWith(github.ref, 'refs/heads/main')
         env:
-          GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="v$(date +'%Y.%m.%d').$(git rev-parse --short HEAD)"
           git tag $TAG
@@ -58,4 +60,4 @@ jobs:
             rusty-extension.zip
             *.vsix
         env:
-          GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

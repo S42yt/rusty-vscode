@@ -1,9 +1,9 @@
 {
-  "name": "rusty",
+  "name": "rusty-code-formatter",
   "displayName": "Rusty Code Formatter",
   "description": "A Rust Code formatter to work together.",
   "version": "1.0.0",
-  "publisher": "S42",
+  "publisher": "S42-real",
   "engines": {
     "vscode": "^1.50.0"
   },
@@ -15,6 +15,10 @@
     "onCommand:rusty.format"
   ],
   "main": "./out/extension.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/s42yt/rusty-vscode.git"
+  },
   "contributes": {
     "languages": [
       {
@@ -52,7 +56,7 @@
           "items": {
             "type": "string"
           },
-          "default": [],
+          "default": ["--edition=2021"],
           "description": "Additional arguments for rustfmt."
         }
       }

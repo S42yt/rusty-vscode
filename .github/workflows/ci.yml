@@ -5,7 +5,7 @@ on:
     branches:
       - main
     tags:
-      - 'v1.*.*'
+      - 'v1.*.*'  
 
 jobs:
   build:
@@ -19,6 +19,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
+          cache: 'npm'
 
       - name: Install Bun
         run: |
@@ -38,7 +39,13 @@ jobs:
         run: vsce package
 
       - name: Create zip package
-        run: zip -r rusty-extension.zip out/ extension.js package.json README.md LICENSE
+        run: |
+          if [ -d "out" ]; then
+            zip -r rusty-extension.zip out/ extension.js package.json README.md LICENSE
+          else
+            echo "The 'out' directory does not exist."
+            exit 1
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1

@@ -5,7 +5,7 @@ on:
     branches:
       - main  
     tags:
-      - 'v1.*.*'  
+      - 'v1.*.*' 
 
 jobs:
   build:
@@ -41,12 +41,12 @@ jobs:
             exit 1
           fi
 
-      - name: Create GitHub Release
+      - name: Upload release files to GitHub
         if: startsWith(github.ref, 'refs/tags/') 
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            *.vsix
             rusty-extension.zip
+            *.vsix  # Make sure this pattern matches the generated VSIX file
         env:
           GITHUB_TOKEN: ${{ secrets.SUPER_SECRET }}

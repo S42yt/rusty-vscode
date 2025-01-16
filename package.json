@@ -2,7 +2,7 @@
   "name": "rusty-code-formatter",
   "displayName": "Rusty Code Formatter",
   "description": "A Rust Code formatter to work together.",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "publisher": "S42-real",
   "engines": {
     "vscode": "^1.50.0"

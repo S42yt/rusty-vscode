@@ -1,8 +1,7 @@
 import * as vscode from "vscode";
 import { spawn } from "child_process";
 import * as path from "path";
-
-const outputChannel = vscode.window.createOutputChannel("Rusty Formatter");
+import { appendLine, showErrorMessage, showInfoMessage } from "./output";
 
 function getRustfmtPath(): string {
   const config = vscode.workspace.getConfiguration("rusty");
@@ -22,8 +21,8 @@ export async function formatWithRustfmt(filePath: string): Promise<void> {
       ? filePath
       : path.join(vscode.workspace.rootPath || "", filePath);
 
-    outputChannel.appendLine(
-      `Executing command: ${rustfmtPath} ${[...rustfmtArgs, absolutePath].join(" ")}`,
+    appendLine(
+      `Executing command: ${rustfmtPath} ${[...rustfmtArgs, absolutePath].join(" ")}`
     );
 
     const rustfmt = spawn(rustfmtPath, [...rustfmtArgs, absolutePath]);
@@ -41,31 +40,29 @@ export async function formatWithRustfmt(filePath: string): Promise<void> {
 
     rustfmt.on("close", (code) => {
       if (code !== 0) {
-        outputChannel.appendLine(`❌ rustfmt exited with code ${code}`);
-        outputChannel.appendLine(
-          `Error executing rustfmt:\n${stderrData.trim()}`,
-        );
+        appendLine(`❌ rustfmt exited with code ${code}`);
+        appendLine(`Error executing rustfmt:\n${stderrData.trim()}`);
         reject(
           new Error(
             stderrData.trim() ||
-              "Unknown error occurred while running rustfmt.",
-          ),
+              "Unknown error occurred while running rustfmt."
+          )
         );
       } else {
         if (stderrData.trim()) {
-          outputChannel.appendLine(
-            `⚠️ Rustfmt warnings/errors:\n${stderrData.trim()}`,
+          appendLine(
+            `⚠️ Rustfmt warnings/errors:\n${stderrData.trim()}`
           );
         }
         if (stdoutData.trim()) {
-          outputChannel.appendLine(`✅ Rustfmt output:\n${stdoutData.trim()}`);
+          appendLine(`✅ Rustfmt output:\n${stdoutData.trim()}`);
         }
         resolve();
       }
     });
 
     rustfmt.on("error", (err) => {
-      outputChannel.appendLine(`❌ Failed to start rustfmt: ${err.message}`);
+      appendLine(`❌ Failed to start rustfmt: ${err.message}`);
       reject(new Error(`Failed to start rustfmt: ${err.message}`));
     });
   });
@@ -75,75 +72,58 @@ export async function formatActiveFile(): Promise<void> {
   const editor = vscode.window.activeTextEditor;
 
   if (!editor) {
-    vscode.window.showErrorMessage("No active editor found!");
-    outputChannel.appendLine("No active editor found.");
+    showErrorMessage("No active editor found!");
+    appendLine("No active editor found.");
     return;
   }
 
   const document = editor.document;
 
   if (document.languageId !== "rust") {
-    vscode.window.showErrorMessage(
-      "Rusty Formatter can only format Rust files.",
+    showErrorMessage(
+      "Rusty Formatter can only format Rust files."
     );
-    outputChannel.appendLine("Attempted to format a non-Rust file.");
+    appendLine("Attempted to format a non-Rust file.");
     return;
   }
 
   if (document.isDirty) {
-    outputChannel.appendLine(
-      "Unsaved changes detected. Saving the document...",
+    appendLine(
+      "Unsaved changes detected. Saving the document..."
     );
     await document.save();
   } else {
-    outputChannel.appendLine("Document is already saved.");
+    appendLine("Document is already saved.");
   }
 
   if (document.isUntitled) {
-    vscode.window.showErrorMessage(
-      "Please save the document before formatting.",
+    showErrorMessage(
+      "Please save the document before formatting."
     );
-    outputChannel.appendLine(
-      "Attempted to format an unsaved (untitled) document.",
+    appendLine(
+      "Attempted to format an unsaved (untitled) document."
     );
     return;
   }
 
   try {
-    vscode.window.showInformationMessage("⚙️ Formatting Rust code...");
-    outputChannel.appendLine(
-      `Formatting started for file: ${document.fileName}`,
+    showInfoMessage("⚙️ Formatting Rust code...");
+    appendLine(
+      `Formatting started for file: ${document.fileName}`
     );
     await formatWithRustfmt(document.fileName);
-    vscode.window.showInformationMessage(
-      "✅ Rust code formatted successfully!",
+    showInfoMessage(
+      "✅ Rust code formatted successfully!"
     );
-    outputChannel.appendLine("Formatting completed successfully.");
+    appendLine("Formatting completed successfully.");
     await document.save();
   } catch (error) {
     if (error instanceof Error) {
-      vscode.window.showErrorMessage(`❌ Formatting failed: ${error.message}`);
-      outputChannel.appendLine(`Formatting failed: ${error.message}`);
+      showErrorMessage(`❌ Formatting failed: ${error.message}`);
+      appendLine(`Formatting failed: ${error.message}`);
     } else {
-      vscode.window.showErrorMessage("❌ Formatting failed: Unknown error.");
-      outputChannel.appendLine("Formatting failed: Unknown error.");
+      showErrorMessage("❌ Formatting failed: Unknown error.");
+      appendLine("Formatting failed: Unknown error.");
     }
   }
-}
-
-export function activate(context: vscode.ExtensionContext): void {
-  outputChannel.appendLine("Rusty Formatter extension is now active.");
-
-  const formatCommand = vscode.commands.registerCommand(
-    "rusty.formatFile",
-    async () => {
-      await formatActiveFile();
-    },
-  );
-
-  context.subscriptions.push(formatCommand, outputChannel);
-}
-
-export function deactivate(): void {
-  outputChannel.dispose();
 }
